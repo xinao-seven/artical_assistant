@@ -9,7 +9,20 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "vue": "^3.5.34"
+    "@types/katex": "^0.16.8",
+    "@types/markdown-it": "^14.1.2",
+    "axios": "^1.17.0",
+    "echarts": "^6.1.0",
+    "element-plus": "^2.14.1",
+    "highlight.js": "^11.11.1",
+    "katex": "^0.17.0",
+    "markdown-it": "^14.2.0",
+    "pdfjs-dist": "^6.0.227",
+    "pinia": "^3.0.4",
+    "vue": "^3.5.34",
+    "vue-echarts": "^8.0.1",
+    "vue-router": "^5.1.0",
+    "vue-virtual-scroller": "^3.0.4"
   },
   "devDependencies": {
     "@types/node": "^24.12.3",

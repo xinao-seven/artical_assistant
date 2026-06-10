@@ -1,0 +1,106 @@
+# ============================================================
+# 科研论文检索和分析工具 - Docker Compose 配置
+# 5 个服务: nginx, backend, db, redis, worker
+# ============================================================
+
+services:
+  # ==================== Nginx 反向代理 + 前端静态文件 ====================
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: paper-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - paper-network
+
+  # ==================== FastAPI 后端 ====================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: paper-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app          # 代码热重载 (开发模式)
+      - uploads:/app/uploads    # PDF 上传目录持久化
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - paper-network
+
+  # ==================== PostgreSQL + pgvector ====================
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: paper-db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: paper_assistant
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d paper_assistant"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - paper-network
+
+  # ==================== Redis (Celery broker + LLM 缓存) ====================
+  redis:
+    image: redis:7.4-alpine
+    container_name: paper-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    restart: unless-stopped
+    networks:
+      - paper-network
+
+  # ==================== Celery Worker (异步任务) ====================
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: paper-worker
+    command: celery -A app.worker.celery_app worker --loglevel=info --concurrency=2
+    volumes:
+      - ./backend:/app
+      - uploads:/app/uploads
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+    restart: unless-stopped
+    networks:
+      - paper-network
+
+# ==================== 数据卷 ====================
+volumes:
+  pgdata:       # PostgreSQL 数据持久化
+  redisdata:    # Redis 数据持久化
+  uploads:      # 上传的 PDF 文件
+
+# ==================== 网络 ====================
+networks:
+  paper-network:
+    driver: bridge
