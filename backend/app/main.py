@@ -53,7 +53,6 @@ async def health_check():
     return {"status": "ok", "app": settings.APP_NAME, "version": settings.APP_VERSION}
 
 
-# ========== 注册路由 (后续步骤逐步添加) ==========
-# 当前第1步暂无业务路由，后续步骤会在这里挂载
-# from app.api.router import api_router
-# app.include_router(api_router, prefix="/api/v1")
+# ========== 注册路由 ==========
+from app.api.router import api_router
+app.include_router(api_router)

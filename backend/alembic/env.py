@@ -27,13 +27,11 @@ if config.config_file_name is not None:
 config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 
 # 导入所有模型，确保 Alembic 能检测到
-# TODO: 后续步骤逐步导入
-# from app.models.user import User
-# from app.models.paper import Paper
-# 等等...
+from app.database import Base
+from app.models.user import User, RefreshToken  # noqa: F401
 
-# 目标元数据 (当前为空，后续步骤逐步添加)
-target_metadata = None  # 改为 Base.metadata 导入后
+# 目标元数据
+target_metadata = Base.metadata
 
 
 def run_migrations_offline():
@@ -74,14 +72,5 @@ async def run_migrations_online():
 if context.is_offline_mode():
     run_migrations_offline()
 else:
-    # 在异步环境中运行
-    # 注意: alembic 的 run_migrations_online 是同步函数，
-    # 这里我们包装成异步
-    try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            import nest_asyncio
-            nest_asyncio.apply()
-        loop.run_until_complete(run_migrations_online())
-    except RuntimeError:
-        asyncio.run(run_migrations_online())
+    # 在线模式: 异步连接数据库并执行迁移
+    asyncio.run(run_migrations_online())
