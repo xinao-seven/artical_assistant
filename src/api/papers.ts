@@ -2,7 +2,7 @@
  * 论文 API 调用封装
  */
 import api from './index'
-import type { AxiosResponse } from 'axios'
+import type { AxiosResponse, AxiosProgressEvent } from 'axios'
 
 // ========== 类型定义 ==========
 
@@ -108,11 +108,15 @@ export function deletePaper(id: string): Promise<AxiosResponse<{ detail: string 
 }
 
 /** 上传 PDF 论文 */
-export function uploadPdf(file: File): Promise<AxiosResponse<UploadResponse>> {
+export function uploadPdf(
+  file: File,
+  onUploadProgress?: (progressEvent: AxiosProgressEvent) => void
+): Promise<AxiosResponse<UploadResponse>> {
   const formData = new FormData()
   formData.append('file', file)
   return api.post('/upload/pdf', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
     timeout: 120000, // 上传+解析可能需要较长时间
+    onUploadProgress
   })
 }

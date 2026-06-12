@@ -85,16 +85,13 @@ async function startUpload(file: File) {
   uploadResult.value = null
 
   try {
-    // 模拟进度
-    const progressTimer = setInterval(() => {
-      if (uploadProgress.value < 90) {
-        uploadProgress.value += 10
+    // 真实上传进度（Axios onUploadProgress 跟踪文件字节上传）
+    const { data } = await uploadPdf(file, (progressEvent) => {
+      if (progressEvent.total) {
+        uploadProgress.value = Math.round((progressEvent.loaded / progressEvent.total) * 100)
       }
-    }, 300)
+    })
 
-    const { data } = await uploadPdf(file)
-
-    clearInterval(progressTimer)
     uploadProgress.value = 100
     uploadResult.value = data
 

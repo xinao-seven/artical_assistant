@@ -58,17 +58,17 @@ artical_assistant/
 
 | 表 | 状态 | 说明 |
 |-----|------|------|
-| users | 待实现(第2步) | 用户 |
-| refresh_tokens | 待实现(第2步) | JWT刷新令牌 |
-| papers | 待实现(第3步) | 论文主表 |
-| user_papers | 待实现(第3步) | 用户论文关联 |
+| users | ✅ 已实现(第2步) | 用户 |
+| refresh_tokens | ✅ 已实现(第2步) | JWT刷新令牌 |
+| papers | ✅ 已实现(第3步) | 论文主表 |
+| user_papers | ✅ 已实现(第3步) | 用户论文关联 |
 | search_history | 待实现(第7步) | 搜索记录 |
 | citation_relations | 待实现(第6步) | 引用关系 |
 | paper_chunks | 待实现(第5步) | 论文分块+向量 |
 | translations | 待实现(第8步) | 翻译记录 |
 | tracking_queries | 待实现(第9步) | 定时追踪 |
 
-## 当前进度: 第1步完成
+## 当前进度: 第3步完成
 
 已实现：
 - [x] 后端目录结构、FastAPI 入口、配置管理
@@ -81,14 +81,17 @@ artical_assistant/
 - [x] Celery 占位文件 (worker不报错)
 - [x] `docker compose up -d` 全部正常启动
 - [x] 数据库迁移成功
+- [x] JWT 双Token 用户认证 (注册/登录/登出/刷新)
+- [x] 论文 CRUD (手动录入/列表/详情/更新/删除)
+- [x] PDF 上传与自动解析入库（真实上传进度）
 
-下一步：第2步 - 用户认证系统
+下一步：第4步 - 论文检索 (ArXiv/Semantic Scholar/Hybrid Search)
 
 ## 实施顺序
 
-1. ✅ 项目脚手架 (当前)
+1. ✅ 项目脚手架
 2. ✅ 用户认证 (JWT + 登录/注册) → 详见 `tech-notes/双Token刷新机制.md`
-3. ⬜ 论文CRUD (PDF上传/解析/论文库)
+3. ✅ 论文CRUD (PDF上传/解析/论文库)
 4. ⬜ 论文检索 (ArXiv/Semantic Scholar/Hybrid Search)
 5. ⬜ RAG摘要 (Embedding/pgvector/LangChain/SSE流式)
 6. ⬜ 引用图谱 (ECharts力导向图)
@@ -116,7 +119,15 @@ npx vue-tsc -b                # TypeScript类型检查
 ## API 端点 (基础路径 /api/v1)
 
 - `GET /health` - 健康检查
-- 第2步增加: `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`
+- `POST /auth/register` - 用户注册
+- `POST /auth/login` - 用户登录
+- `POST /auth/refresh` - 刷新Token
+- `GET /papers` - 论文列表 (分页/筛选)
+- `GET /papers/{id}` - 论文详情
+- `POST /papers` - 手动创建论文
+- `PATCH /papers/{id}` - 更新论文
+- `DELETE /papers/{id}` - 删除论文
+- `POST /upload/pdf` - 上传PDF论文
 - 后续逐步增加
 
 ## 开发注意事项
