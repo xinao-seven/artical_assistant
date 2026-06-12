@@ -7,7 +7,6 @@
 import uuid
 import shutil
 from pathlib import Path
-from typing import Any
 
 from fastapi import HTTPException, UploadFile, status
 from loguru import logger
@@ -18,7 +17,13 @@ from sqlalchemy.orm import selectinload, joinedload, contains_eager
 from app.config import settings
 from app.models.paper import Paper, UserPaper
 from app.models.user import User
-from app.schemas.paper import PaperCreate, PaperUpdate, PaperListParams
+from app.schemas.paper import (
+    PaperCreate,
+    PaperUpdate,
+    PaperListParams,
+    PaperResponse,
+    PaperDetailResponse,
+)
 from app.utils.pdf_parser import extract_pdf_metadata
 
 
@@ -29,7 +34,7 @@ async def create_paper(
     db: AsyncSession,
     user: User,
     data: PaperCreate,
-) -> Paper:
+) -> PaperResponse:
     """
     手动创建论文，同时建立用户关联
 
@@ -39,7 +44,7 @@ async def create_paper(
         data: 论文数据
 
     Returns:
-        新创建的 Paper 对象
+        PaperResponse
     """
     # 创建论文记录
     paper = Paper(
@@ -70,14 +75,14 @@ async def create_paper(
     # 重新查询以预加载 user_papers 关系（异步下不能延迟加载）
     refreshed_paper = await get_paper_detail(db, user, paper.id)
     logger.info(f"用户 {user.email} 创建论文: {paper.title[:50]}")
-    return refreshed_paper
+    return paper_to_response(refreshed_paper)
 
 
 async def get_papers(
     db: AsyncSession,
     user: User,
     params: PaperListParams,
-) -> tuple[list[Paper], int]:
+) -> tuple[list[PaperResponse], int]:
     """
     获取当前用户的论文列表（分页 + 筛选）
 
@@ -87,7 +92,7 @@ async def get_papers(
         params: 查询参数
 
     Returns:
-        (论文列表, 总数)
+        (PaperResponse 列表, 总数)
     """
     # 基础查询：用户关联的论文
     base_query = (
@@ -133,7 +138,7 @@ async def get_papers(
     result = await db.execute(base_query)
     papers = list(result.scalars().unique().all())
 
-    return papers, total
+    return [paper_to_response(p) for p in papers], total
 
 
 async def get_paper_detail(
@@ -238,7 +243,7 @@ async def update_user_paper(
     user: User,
     paper_id: uuid.UUID,
     data: PaperUpdate,
-) -> UserPaper:
+) -> PaperResponse:
     """
     更新用户对论文的关联信息 (标签/笔记/分组)
 
@@ -249,7 +254,7 @@ async def update_user_paper(
         data: 更新数据
 
     Returns:
-        更新后的 UserPaper 对象
+        PaperResponse
     """
     result = await db.execute(
         select(UserPaper).where(
@@ -276,7 +281,9 @@ async def update_user_paper(
     await db.flush()
     await db.refresh(user_paper)
 
-    return user_paper
+    # 返回完整的论文响应（含更新后的用户关联信息）
+    paper = await get_paper_detail(db, user, paper_id)
+    return paper_to_response(paper)
 
 
 # ========== PDF 上传处理 ==========
@@ -373,9 +380,9 @@ async def upload_and_parse_pdf(
 # ========== 工具函数 ==========
 
 
-def paper_to_response(paper: Paper) -> dict[str, Any]:
+def paper_to_response(paper: Paper) -> PaperResponse:
     """
-    将 Paper ORM 对象转为 API 响应字典
+    将 Paper ORM 对象转为 PaperResponse
     合并 user_papers 中的用户关联信息
     """
     base = {
@@ -408,17 +415,18 @@ def paper_to_response(paper: Paper) -> dict[str, Any]:
         base["collection"] = up.collection
         base["added_at"] = up.added_at
 
-    return base
+    return PaperResponse(**base)
 
 
-def paper_to_detail_response(paper: Paper) -> dict[str, Any]:
+def paper_to_detail_response(paper: Paper) -> PaperDetailResponse:
     """
-    将 Paper ORM 对象转为详情 API 响应字典
+    将 Paper ORM 对象转为 PaperDetailResponse
     """
     base = paper_to_response(paper)
-    base["full_text"] = paper.full_text
-    base["file_path"] = paper.file_path
-    # 后续步骤实现
-    base["chunks_count"] = 0
-    base["has_summary"] = False
-    return base
+    return PaperDetailResponse(
+        **base.model_dump(),
+        full_text=paper.full_text,
+        file_path=paper.file_path,
+        chunks_count=0,
+        has_summary=False,
+    )

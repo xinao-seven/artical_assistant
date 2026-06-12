@@ -55,9 +55,7 @@ async def list_papers(
         tag=tag,
         keyword=keyword,
     )
-    papers, total = await paper_service.get_papers(db, current_user, params)
-
-    items = [paper_service.paper_to_response(p) for p in papers]
+    items, total = await paper_service.get_papers(db, current_user, params)
 
     return PaginatedResponse(
         items=items,
@@ -95,8 +93,7 @@ async def create_paper(
     - 创建论文记录并自动关联当前用户
     - 支持设置标签、笔记和分组
     """
-    paper = await paper_service.create_paper(db, current_user, request)
-    return paper_service.paper_to_response(paper)
+    return await paper_service.create_paper(db, current_user, request)
 
 
 @router.patch("/{paper_id}", response_model=PaperResponse)
@@ -112,12 +109,9 @@ async def update_paper(
     - 可更新标签、笔记、分组
     - 不会修改论文本身的数据
     """
-    user_paper = await paper_service.update_user_paper(
+    return await paper_service.update_user_paper(
         db, current_user, paper_id, request
     )
-    # 返回更新后的论文信息
-    paper = await paper_service.get_paper_detail(db, current_user, paper_id)
-    return paper_service.paper_to_response(paper)
 
 
 @router.delete("/{paper_id}", response_model=PaperDeleteResponse)
