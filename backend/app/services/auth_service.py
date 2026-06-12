@@ -9,27 +9,29 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException, status
 from jose import JWTError, jwt
-from passlib.context import CryptContext
+import bcrypt
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.models.user import User, RefreshToken
 
-# 密码哈希上下文 (bcrypt)
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 
 # ========== 密码工具 ==========
 
 def hash_password(password: str) -> str:
     """对密码进行 bcrypt 哈希"""
-    return pwd_context.hash(password)
+    # bcrypt 要求密码不超过 72 字节 (UTF-8)
+    password_bytes = password.encode("utf-8")[:72]
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(password_bytes, salt).decode("utf-8")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """验证密码是否匹配"""
-    return pwd_context.verify(plain_password, hashed_password)
+    password_bytes = plain_password.encode("utf-8")[:72]
+    hashed_bytes = hashed_password.encode("utf-8")
+    return bcrypt.checkpw(password_bytes, hashed_bytes)
 
 
 # ========== JWT 工具 ==========
