@@ -66,10 +66,11 @@ async def create_paper(
     )
     db.add(user_paper)
     await db.flush()
-    await db.refresh(paper)
 
+    # 重新查询以预加载 user_papers 关系（异步下不能延迟加载）
+    refreshed_paper = await get_paper_detail(db, user, paper.id)
     logger.info(f"用户 {user.email} 创建论文: {paper.title[:50]}")
-    return paper
+    return refreshed_paper
 
 
 async def get_papers(
@@ -362,10 +363,11 @@ async def upload_and_parse_pdf(
     )
     db.add(user_paper)
     await db.flush()
-    await db.refresh(paper)
 
+    # 重新查询以预加载 user_papers 关系（异步下不能延迟加载）
+    refreshed_paper = await get_paper_detail(db, user, paper.id)
     logger.info(f"用户 {user.email} 上传论文入库: {paper.title[:50]}")
-    return paper
+    return refreshed_paper
 
 
 # ========== 工具函数 ==========

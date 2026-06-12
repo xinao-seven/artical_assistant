@@ -39,8 +39,12 @@ api.interceptors.response.use(
   async (error: AxiosError<{ detail?: string }>) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean }
 
-    // 401 未认证 → 尝试刷新 Token
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // 这些端点本身不需要 Token，401 是正常的业务错误（如密码错误），不应触发刷新
+    const skipRefreshUrls = ['/auth/login', '/auth/register', '/auth/refresh']
+    const isAuthEndpoint = skipRefreshUrls.some((url) => originalRequest.url?.includes(url))
+
+    // 401 未认证 → 尝试刷新 Token（仅对需要认证的接口）
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
       const refreshToken = getRefreshToken()
 
       if (!refreshToken) {
